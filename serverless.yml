@@ -1,0 +1,88 @@
+service: crud-serveless-client
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  stage: dev
+  region: us-east-1
+  deploymentBucket:
+    name: crud-serveless-client-bucket
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: arn:aws:dynamodb:us-east-1:381713276730:table/usersTable
+
+functions:
+  get-Users:
+    handler: getUsers/handler.getUsers
+    events:
+      - http:
+          path: users/{id}
+          method: GET
+  post-Users:
+    handler: postUsers/handler.createUsers
+    events:
+      - http:
+          path: users
+          method: POST
+  update-Users:
+    handler: updateUsers/handler.updateUsers
+    events:
+      - http:
+          path: users/{id}
+          method: PUT
+  delete-Users:
+    handler: deleteUsers/handler.deleteUsers
+    events:
+    - http:
+        path: users/{id}
+        method: DELETE
+
+resources:
+  Resources:
+    usersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: usersTable
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+plugins:
+  - serverless-dynamodb
+  - serverless-offline
+  - serverless-deployment-bucket
+
+custom:
+  serverless-dynamodb:
+    # If you only want to use DynamoDB Local in some stages, declare them here
+    stages:
+      - dev
+    start:
+      port: 5000
+      inMemory: true
+      heapInitial: 200m
+      heapMax: 1g
+      migrate: true
+      seed: true
+      convertEmptyValues: true
+    # Uncomment only if you already have a DynamoDB running locally
+   
+package: 
+      individually: true
+      patterns:
+        - "!.dynamodb"
+        - "!node_modules"
+        
