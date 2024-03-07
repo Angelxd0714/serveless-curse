@@ -19,28 +19,42 @@ const dynamodb = new aws.DynamoDB.DocumentClient({
 const deleteUsers = async (event, context) => {
     try {
         const pk = event.pathParameters.id;
-        const params = {
+
+        // Verificar si el elemento existe antes de intentar eliminarlo
+        const getItemParams = {
             TableName: 'usersTable',
-            Key: { // Added the Key parameter here
-                pk: pk // Specify the primary key value
+            Key: {
+                pk: pk,
             },
-            UpdateExpression: 'pk = :pk',
-            
-            ReturnValues: 'Delete_pk'
         };
-    
-        // Use await to capture errors
-        const response = await dynamodb.delete
 
-            (params).promise();
+        const existingItem = await dynamodb.get(getItemParams).promise();
 
+        // Si el elemento no existe, retornar un error 404
+        if (!existingItem.Item) {
+            return {
+                statusCode: 404,
+                body: JSON.stringify({ error: 'El elemento no existe' }),
+            };
+        }
+
+        // Si el elemento existe, proceder con la eliminación
+        const deleteParams = {
+            TableName: 'usersTable',
+            Key: {
+                pk: pk,
+            },
+        };
+
+        // Utiliza await para capturar errores
+        const response = await dynamodb.delete(deleteParams).promise();
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ user: params.Item, 'response': response }),
+            body: JSON.stringify({ response }),
         };
     } catch (error) {
-        // Handle multiple error types
+        // Maneja diferentes tipos de errores
         console.error('Error:', error.message);
 
         if (error.code === 'ResourceNotFoundException') {
@@ -56,6 +70,7 @@ const deleteUsers = async (event, context) => {
         }
     }
 };
+
 module.exports = {
     deleteUsers: deleteUsers
 };
